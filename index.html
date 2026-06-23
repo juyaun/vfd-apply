@@ -15,31 +15,30 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .qrcode-label { font-size:13px; color:#C0392B; margin-top:12px; font-weight:600; }
 .qrcode-sub { font-size:12px; color:#aaa; margin-top:4px; }
 
-/* 标签切换 */
 .tabs { display:flex; gap:0; margin-bottom:20px; background:#f5f5f5; border-radius:12px; padding:4px; }
-.tab { flex:1; height:42px; line-height:42px; text-align:center; font-size:15px; color:#999; border-radius:10px; transition:all .2s; }
+.tab { flex:1; height:42px; line-height:42px; text-align:center; font-size:15px; color:#999; border-radius:10px; transition:all .2s; cursor:pointer; }
 .tab--active { background:#fff; color:#C0392B; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+
+.tab-panel { min-height:220px; }
 
 .input-wrap { margin-bottom:16px; }
 .input-wrap input { width:100%; height:50px; border:1px solid #E8E8E8; border-radius:12px; padding:0 16px; font-size:16px; text-align:center; outline:none; }
 .input-wrap input:focus { border-color:#C0392B; }
 
-.btn { width:100%; height:50px; line-height:50px; border-radius:12px; font-size:16px; font-weight:600; border:none; }
+.btn { width:100%; height:50px; line-height:50px; border-radius:12px; font-size:16px; font-weight:600; border:none; cursor:pointer; }
 .btn--primary { background:#C0392B; color:#fff; }
-.btn--outline { background:#fff; color:#C0392B; border:1px solid #C0392B; margin-top:10px; }
 
-.msg { font-size:14px; padding:12px; border-radius:10px; margin-top:16px; display:none; }
+.msg { font-size:14px; padding:12px; border-radius:10px; margin-top:16px; display:none; line-height:1.6; }
 .msg--show { display:block; }
 .msg--ok { background:#E8F8F0; color:#27ae60; }
 .msg--no { background:#FFF3CD; color:#856404; }
 .msg--info { background:#F0F2FF; color:#5A6ABF; }
 
 .hint { font-size:13px; color:#E05858; margin-top:6px; display:none; }
-.tip { font-size:12px; color:#bbb; margin-top:8px; }
-.admin-link { font-size:12px; color:#999; margin-top:20px; }
+.tip { font-size:12px; color:#bbb; margin-top:8px; text-align:center; width:100%; }
+.admin-link { font-size:12px; color:#999; margin-top:20px; text-align:center; width:100%; }
 .admin-link a { color:#C0392B; }
 
-/* 管理员面板 */
 .admin-panel { width:100%; max-width:400px; display:none; }
 .admin-panel--show { display:block; }
 .admin-card { background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 4px 24px rgba(196,18,48,.08); }
@@ -58,7 +57,6 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 </head>
 <body>
 
-<!-- ==================== 用户端 ==================== -->
 <div id="user-view">
 
 <div class="card" id="qrcode-card">
@@ -70,25 +68,12 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 </div>
 
 <div class="card" id="action-card">
-  <!-- 标签切换 -->
   <div class="tabs">
     <div class="tab tab--active" id="tabSubmit" onclick="switchTab('submit')">📝 提交申请</div>
     <div class="tab" id="tabQuery" onclick="switchTab('query')">🔍 查询状态</div>
   </div>
 
-  <!-- 查询模式 -->
-  <div id="panelQuery" style="display:none;">
-    <div class="subtitle" style="margin-bottom:16px;">输入微信名，查询是否已在体验名单中</div>
-    <div class="input-wrap">
-      <input id="queryInput" type="text" placeholder="请输入微信名称" maxlength="30" autocomplete="off" />
-    </div>
-    <div class="hint" id="queryHint">请输入微信名称</div>
-    <button class="btn btn--primary" onclick="doQuery()">查询</button>
-    <div class="msg" id="queryMsg"></div>
-  </div>
-
-  <!-- 提交模式 -->
-  <div id="panelSubmit">
+  <div class="tab-panel" id="panelSubmit">
     <div class="subtitle" style="margin-bottom:16px;">填写微信名提交申请，管理员添加后即可体验</div>
     <div class="input-wrap">
       <input id="submitInput" type="text" placeholder="请输入您的微信名称" maxlength="30" autocomplete="off" />
@@ -96,6 +81,16 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
     <div class="hint" id="submitHint">请输入微信名称</div>
     <button class="btn btn--primary" onclick="doSubmit()">提交申请</button>
     <div class="msg" id="submitMsg"></div>
+  </div>
+
+  <div class="tab-panel" id="panelQuery" style="display:none;">
+    <div class="subtitle" style="margin-bottom:16px;">输入微信名，查询是否已在体验名单中</div>
+    <div class="input-wrap">
+      <input id="queryInput" type="text" placeholder="请输入微信名称" maxlength="30" autocomplete="off" />
+    </div>
+    <div class="hint" id="queryHint">请输入微信名称</div>
+    <button class="btn btn--primary" onclick="doQuery()">查询</button>
+    <div class="msg" id="queryMsg"></div>
   </div>
 </div>
 
@@ -108,10 +103,15 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 <div class="admin-panel" id="admin-view">
   <div class="count-row">
     <div class="count-box"><div class="count-num" id="countApproved">-</div><div class="count-label">已通过</div></div>
+    <div class="count-box"><div class="count-num" id="countPending">-</div><div class="count-label">待添加</div></div>
   </div>
   <div class="admin-card">
     <h3>已通过名单（长按可复制）</h3>
     <ul class="admin-list" id="approvedListEl"></ul>
+  </div>
+  <div class="admin-card">
+    <h3>待添加名单（长按可复制）</h3>
+    <ul class="admin-list" id="pendingListEl"></ul>
   </div>
   <div class="admin-back" onclick="hideAdmin()">← 返回申请页</div>
   <div class="tip">中车株洲所 · 国家变流中心</div>
@@ -120,24 +120,35 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 <script>
 const CONFIG = {
   approvedUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/approved.json',
+  pendingUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/pending.json',
   qrcodeUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/qrcode.jpg',
-  storageKey: 'vfd_apply_name',
   adminPassword: 'tgs2026',
 };
 
 let approvedList = [];
+let pendingList = [];
 let currentTab = 'submit';
 
-(async function init() {
-  document.getElementById('qrcodeImg').src = CONFIG.qrcodeUrl;
-  await loadApprovedList();
+(function init() {
+  // QR 码加时间戳防止缓存
+  document.getElementById('qrcodeImg').src = CONFIG.qrcodeUrl + '?v=' + Date.now();
+  loadData();
 })();
 
-async function loadApprovedList() {
+async function loadApproved() {
   try {
     const resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
-    if (resp.ok) { const data = await resp.json(); approvedList = data.names || []; }
+    if (resp.ok) { const d = await resp.json(); approvedList = d.names || []; }
   } catch (e) {}
+}
+async function loadPending() {
+  try {
+    const resp = await fetch(CONFIG.pendingUrl + '?t=' + Date.now());
+    if (resp.ok) { const d = await resp.json(); pendingList = d.names || []; }
+  } catch (e) { pendingList = []; }
+}
+async function loadData() {
+  await Promise.all([loadApproved(), loadPending()]);
 }
 
 /* ====== 标签切换 ====== */
@@ -157,14 +168,17 @@ function doQuery() {
   if (!name) { document.getElementById('queryHint').style.display='block'; return; }
   document.getElementById('queryHint').style.display='none';
 
-  loadApprovedList().then(() => {
+  loadData().then(() => {
     const box = document.getElementById('queryMsg');
     if (approvedList.includes(name)) {
       box.className = 'msg msg--show msg--ok';
-      box.textContent = '✅ ' + name + ' 已在体验名单中，长按上方小程序码即可进入';
+      box.textContent = '「' + name + '」已在体验名单中，长按上方小程序码即可进入';
+    } else if (pendingList.includes(name)) {
+      box.className = 'msg msg--show msg--no';
+      box.textContent = '「' + name + '」已提交申请，请等待管理员范保硕添加，添加后即可使用';
     } else {
       box.className = 'msg msg--show msg--no';
-      box.textContent = '❌ ' + name + ' 暂未在体验名单中，请切换到「提交申请」提交您的微信名';
+      box.textContent = '「' + name + '」未在体验名单中，请切换到「提交申请」提交您的微信名';
     }
   });
 }
@@ -175,14 +189,17 @@ function doSubmit() {
   if (!name) { document.getElementById('submitHint').style.display='block'; return; }
   document.getElementById('submitHint').style.display='none';
 
-  loadApprovedList().then(() => {
+  loadData().then(() => {
     const box = document.getElementById('submitMsg');
     if (approvedList.includes(name)) {
       box.className = 'msg msg--show msg--ok';
-      box.textContent = '✅ 您已在体验名单中，长按上方小程序码即可进入';
+      box.textContent = '「' + name + '」已在体验名单中，长按上方小程序码即可进入';
+    } else if (pendingList.includes(name)) {
+      box.className = 'msg msg--show msg--info';
+      box.textContent = '「' + name + '」已提交过申请，请耐心等待管理员范保硕添加，添加后即可使用';
     } else {
       box.className = 'msg msg--show msg--info';
-      box.textContent = '已提交「' + name + '」，请告知管理员（范保硕）尽快添加。添加后再次扫码即可进入。';
+      box.textContent = '已提交「' + name + '」，等待管理员范保硕添加后即可使用，感谢您的配合';
     }
   });
 }
@@ -191,19 +208,22 @@ function doSubmit() {
 function showAdmin() {
   const pw = prompt('管理员密码：');
   if (pw !== CONFIG.adminPassword) { alert('密码错误'); return; }
-  loadApprovedList().then(() => {
+  loadData().then(() => {
     document.getElementById('user-view').style.display = 'none';
     document.getElementById('admin-view').classList.add('admin-panel--show');
     document.getElementById('countApproved').textContent = approvedList.length;
-    const el = document.getElementById('approvedListEl');
-    el.innerHTML = approvedList.length
-      ? approvedList.map(n => '<li>' + escapeHtml(n) + '<span class="admin-badge--ok">已通过</span></li>').join('')
-      : '<div class="admin-empty">暂无</div>';
+    document.getElementById('countPending').textContent = pendingList.length;
+    document.getElementById('approvedListEl').innerHTML = renderList(approvedList, '已通过');
+    document.getElementById('pendingListEl').innerHTML = renderList(pendingList, '待添加');
   });
 }
 function hideAdmin() {
   document.getElementById('user-view').style.display = 'block';
   document.getElementById('admin-view').classList.remove('admin-panel--show');
+}
+function renderList(list, badge) {
+  if (!list.length) return '<div class="admin-empty">暂无</div>';
+  return list.map(n => '<li>' + escapeHtml(n) + '<span class="admin-badge--ok">' + badge + '</span></li>').join('');
 }
 function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
