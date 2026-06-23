@@ -37,13 +37,15 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .tip { font-size:12px; color:#bbb; margin-top:8px; }
 .admin-link { font-size:12px; color:#999; margin-top:20px; }
 .admin-link a { color:#C0392B; }
+.notify { margin-top:8px; }
+.notify-desc { font-size:13px; color:#666; margin-bottom:12px; text-align:center; }
+.notify-hint { font-size:12px; color:#aaa; margin-top:8px; text-align:center; }
 </style>
 </head>
 <body>
 
 <!-- 小程序码卡片：始终显示，已添加的人直接长按进 -->
 <div class="card" id="qrcode-card">
-  <div class="logo">📱</div>
   <div class="title">变频器产品助手</div>
   <div class="subtitle">内部测试版 · 微信扫码体验</div>
   <img class="qrcode-img" id="qrcodeImg" src="" alt="小程序体验码" />
@@ -66,9 +68,15 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
   <button class="btn btn--primary" onclick="submitName()">提交申请</button>
   <div class="msg" id="msgBox"></div>
   <button class="btn btn--outline" id="recheckBtn" style="display:none;" onclick="recheck()">重新检查状态</button>
+  <div class="notify" id="notifyBox" style="display:none;">
+    <div class="divider"><div class="divider-line"></div><div class="divider-text">通知管理员</div><div class="divider-line"></div></div>
+    <div class="notify-desc">请将以下消息发送给管理员，以便尽快添加：</div>
+    <button class="btn btn--primary" onclick="copyNotify()">📋 一键复制并通知管理员</button>
+    <div class="notify-hint">复制后将自动跳转微信，粘贴发送即可</div>
+  </div>
 </div>
 
-<div class="tip">中车 · 国家变流中心</div>
+<div class="tip">中车株洲所 · 国家变流中心</div>
 <div class="admin-link"><a href="#" onclick="showAdmin()">管理员入口</a></div>
 
 <script>
@@ -126,10 +134,22 @@ function submitName() {
     document.getElementById('qrcodeStatus').textContent = '✅ ' + name + '，欢迎回来';
     showMsg('ok', '您已在体验名单中，长按上方小程序码即可进入');
     document.getElementById('recheckBtn').style.display = 'none';
+    document.getElementById('notifyBox').style.display = 'none';
   } else {
     document.getElementById('qrcodeStatus').textContent = '⏳ ' + name + '，等待管理员添加';
-    showMsg('wait', '申请已提交。管理员添加后，刷新本页面即可看到确认提示。');
+    showMsg('wait', '您的微信名尚未在体验名单中，请通知管理员尽快添加');
     document.getElementById('recheckBtn').style.display = 'block';
+    document.getElementById('notifyBox').style.display = 'block';
+  }
+}
+
+function copyNotify() {
+  const name = document.getElementById('nameInput').value.trim();
+  const msg = '【试用申请】微信名：' + name + '，申请加入变频器产品助手体验版，请添加至开发成员。';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(() => alert('已复制，请粘贴发送给管理员（范保硕）'));
+  } else {
+    prompt('请复制以下内容发送给管理员：', msg);
   }
 }
 
