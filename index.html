@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>变频器产品助手 - 申请试用</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear-gradient(160deg,#FFF5F5 0%,#FDE8E8 50%,#FFFBFB 100%); min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; }
+.card { background:#fff; border-radius:20px; padding:40px 32px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(196,18,48,0.08); text-align:center; }
+.logo { font-size:48px; margin-bottom:16px; }
+.title { font-size:22px; font-weight:700; color:#C0392B; margin-bottom:8px; }
+.subtitle { font-size:14px; color:#999; margin-bottom:28px; line-height:1.6; }
+
+.input-wrap { margin-bottom:20px; }
+.input-wrap input {
+  width:100%; height:52px; border:1px solid #E8E8E8; border-radius:12px;
+  padding:0 16px; font-size:16px; text-align:center; outline:none;
+  transition:border-color 0.2s;
+}
+.input-wrap input:focus { border-color:#C0392B; }
+
+.btn {
+  width:100%; height:52px; line-height:52px; border-radius:12px;
+  font-size:17px; font-weight:600; border:none; cursor:pointer;
+  transition:opacity 0.2s;
+}
+.btn:active { opacity:0.85; }
+.btn--primary { background:#C0392B; color:#fff; }
+.btn--outline { background:#fff; color:#C0392B; border:1px solid #C0392B; margin-top:12px; }
+
+.qrcode-img { width:200px; height:200px; margin:20px auto; display:block; border-radius:12px; border:1px solid #f0f0f0; }
+.status-icon { font-size:56px; margin-bottom:12px; }
+.status-text { font-size:16px; color:#333; margin-bottom:6px; }
+.status-sub { font-size:13px; color:#999; line-height:1.6; margin-bottom:20px; }
+.tip { font-size:12px; color:#bbb; margin-top:24px; text-align:center; }
+.admin-link { font-size:12px; color:#999; margin-top:32px; }
+.admin-link a { color:#C0392B; }
+.hint { font-size:13px; color:#E05858; margin-top:6px; display:none; }
+
+/* 状态显示/隐藏 */
+.state { display:none; }
+.state--active { display:block; }
+</style>
+</head>
+<body>
+
+<!-- 状态1：输入微信名 -->
+<div class="card state state--active" id="state-form">
+  <div class="logo">📱</div>
+  <div class="title">变频器产品助手</div>
+  <div class="subtitle">内部测试版本，请先登记微信名称<br>管理员添加后即可体验</div>
+  <div class="input-wrap">
+    <input id="nameInput" type="text" placeholder="请输入您的微信名称" maxlength="30" autocomplete="off" />
+  </div>
+  <div class="hint" id="nameHint">请输入微信名称</div>
+  <button class="btn btn--primary" onclick="submitName()">提交申请</button>
+</div>
+
+<!-- 状态2：等待管理员添加 -->
+<div class="card state" id="state-waiting">
+  <div class="status-icon">⏳</div>
+  <div class="title">申请已提交</div>
+  <div class="status-text">微信名称：<b id="waitingName"></b></div>
+  <div class="status-sub">
+    请等待管理员将您添加至开发成员列表<br>
+    添加完成后再次扫描此二维码即可进入小程序<br><br>
+    <span style="color:#C0392B;">您可随时再次扫码查看状态</span>
+  </div>
+  <button class="btn btn--outline" onclick="recheck()">重新检查状态</button>
+</div>
+
+<!-- 状态3：已通过，显示体验码 -->
+<div class="card state" id="state-done">
+  <div class="status-icon">✅</div>
+  <div class="title">审核已通过</div>
+  <div class="status-text"><b id="doneName"></b>，欢迎体验</div>
+  <div class="status-sub">请长按下方小程序码识别进入</div>
+  <img class="qrcode-img" id="qrcodeImg" src="" alt="小程序体验码" />
+  <div class="status-sub" style="margin-top:8px;">或微信搜索「变频器产品助手」</div>
+</div>
+
+<div class="tip">中车 · 国家变流中心</div>
+<div class="admin-link"><a href="#" onclick="showAdmin()">管理员入口</a></div>
+
+<script>
+// ====== 配置（部署时修改此处） ======
+const CONFIG = {
+  // COS 上 approved.json 的公开访问地址
+  approvedUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/approved.json',
+  // 小程序体验码图片地址（部署后替换为实际二维码图片URL）
+  qrcodeUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/qrcode.jpg',
+  // 本地存储 key
+  storageKey: 'vfd_apply_info',
+  // 管理员密码（部署时修改）
+  adminPassword: 'tgs2026',
+};
+
+// ====== 状态管理 ======
+let approvedList = [];
+
+// 页面加载
+(async function init() {
+  await loadApprovedList();
+  checkState();
+})();
+
+async function loadApprovedList() {
+  try {
+    const resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      approvedList = (data && data.names) || [];
+    }
+  } catch (e) {
+    console.warn('加载名单失败，使用缓存');
+    const cached = localStorage.getItem('approved_cache');
+    if (cached) approvedList = JSON.parse(cached);
+  }
+}
+
+function checkState() {
+  const saved = readLocal();
+  // 已通过
+  if (saved && saved.name && approvedList.includes(saved.name)) {
+    showState('done', saved.name);
+    return;
+  }
+  // 已提交等待中
+  if (saved && saved.name && saved.status === 'pending') {
+    showState('waiting', saved.name);
+    return;
+  }
+  // 新用户
+  showState('form');
+}
+
+function showState(state, name) {
+  document.querySelectorAll('.state').forEach(el => el.classList.remove('state--active'));
+  const el = document.getElementById('state-' + state);
+  if (el) el.classList.add('state--active');
+
+  if (state === 'waiting') document.getElementById('waitingName').textContent = name || '';
+  if (state === 'done') {
+    document.getElementById('doneName').textContent = name || '';
+    document.getElementById('qrcodeImg').src = CONFIG.qrcodeUrl;
+  }
+}
+
+function readLocal() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.storageKey)) || null;
+  } catch (e) { return null; }
+}
+
+function saveLocal(data) {
+  localStorage.setItem(CONFIG.storageKey, JSON.stringify(data));
+}
+
+// ====== 用户操作 ======
+function submitName() {
+  const input = document.getElementById('nameInput');
+  const name = input.value.trim();
+  if (!name) {
+    document.getElementById('nameHint').style.display = 'block';
+    return;
+  }
+  document.getElementById('nameHint').style.display = 'none';
+
+  // 检查是否已在通过名单中
+  if (approvedList.includes(name)) {
+    saveLocal({ name, status: 'approved' });
+    showState('done', name);
+    return;
+  }
+
+  // 保存为待审核状态
+  saveLocal({ name, status: 'pending', time: new Date().toISOString() });
+  showState('waiting', name);
+}
+
+function recheck() {
+  loadApprovedList().then(() => {
+    const saved = readLocal();
+    if (saved && saved.name && approvedList.includes(saved.name)) {
+      saveLocal({ name: saved.name, status: 'approved' });
+      showState('done', saved.name);
+    } else {
+      alert('暂未通过，请耐心等待管理员添加');
+    }
+  });
+}
+
+// ====== 管理员功能 ======
+function showAdmin() {
+  const pw = prompt('请输入管理员密码：');
+  if (pw !== CONFIG.adminPassword) {
+    alert('密码错误');
+    return;
+  }
+
+  // 收集本地所有待审核记录（仅本设备可见）
+  const saved = readLocal();
+  let info = '当前设备状态：\n';
+  if (saved) {
+    info += '微信名：' + saved.name + '\n';
+    info += '状态：' + (saved.status === 'approved' ? '已通过' : '待审核') + '\n';
+    info += '提交时间：' + (saved.time || '未知') + '\n';
+  } else {
+    info += '未提交过申请\n';
+  }
+  info += '\n已通过名单：\n' + (approvedList.length > 0 ? approvedList.join('\n') : '（空）');
+  info += '\n\n提示：在COS上修改 apply/approved.json 来添加通过的用户名。格式：{"names":["微信名1","微信名2"]}';
+  alert(info);
+}
+</script>
+</body>
+</html>
