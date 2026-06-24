@@ -226,7 +226,7 @@ async function writeToPending(name, box) {
     var getResp = await fetch(CONFIG.githubApi, {
       headers: { Authorization: 'Bearer ' + CONFIG.githubToken }
     });
-    if (!getResp.ok) throw new Error('读取失败');
+    if (!getResp.ok) throw new Error('读取失败 HTTP' + getResp.status);
     var fileData = await getResp.json();
     var sha = fileData.sha;
     var current = JSON.parse(atob(fileData.content.replace(/\n/g, '')));
