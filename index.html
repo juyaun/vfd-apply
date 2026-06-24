@@ -130,10 +130,9 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 const CONFIG = {
   approvedUrl: './approved.json',
   pendingUrl: './pending.json',
+  pendingApi: 'https://jsonblob.com/api/jsonBlob/019ef79b-92f9-786e-9205-7907b0137cde',
   qrcodeUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/qrcode.jpg',
   adminPassword: 'tgs2026',
-  githubToken: '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',
-  githubApi: 'https://api.github.com/repos/juyaun/vfd-apply/contents/pending.json',
 };
 
 let approvedList = [];
@@ -222,14 +221,10 @@ function doSubmit() {
 
 async function writeToPending(name, box) {
   try {
-    // 1. 先读取当前文件（获取 SHA）
-    var getResp = await fetch(CONFIG.githubApi, {
-      headers: { Authorization: 'Bearer ' + CONFIG.githubToken }
-    });
+    // 1. 读取当前 blob
+    var getResp = await fetch(CONFIG.pendingApi);
     if (!getResp.ok) throw new Error('读取失败 HTTP' + getResp.status);
-    var fileData = await getResp.json();
-    var sha = fileData.sha;
-    var current = JSON.parse(atob(fileData.content.replace(/\n/g, '')));
+    var current = await getResp.json();
     var names = current.names || [];
     if (names.indexOf(name) !== -1) {
       box.textContent = '「' + name + '」已提交过，请耐心等待管理员范保硕添加';
@@ -237,21 +232,13 @@ async function writeToPending(name, box) {
     }
     names.push(name);
 
-    // 2. 写入更新
-    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify({ names: names }, null, 2))));
-    var putResp = await fetch(CONFIG.githubApi, {
+    // 2. 写回 blob
+    var putResp = await fetch(CONFIG.pendingApi, {
       method: 'PUT',
-      headers: {
-        Authorization: 'Bearer ' + CONFIG.githubToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        message: 'add ' + name,
-        content: newContent,
-        sha: sha
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names: names })
     });
-    if (!putResp.ok) throw new Error('写入失败 HTTP ' + putResp.status);
+    if (!putResp.ok) throw new Error('写入失败 HTTP' + putResp.status);
 
     pendingList.push(name);
     box.textContent = '已提交「' + name + '」，等待管理员范保硕添加后即可使用';
