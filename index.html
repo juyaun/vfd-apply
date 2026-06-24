@@ -10,7 +10,6 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .card { background:#fff; border-radius:20px; padding:32px 28px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(196,18,48,.08); text-align:center; margin-bottom:20px; }
 .title { font-size:22px; font-weight:700; color:#C0392B; margin-bottom:4px; }
 .subtitle { font-size:13px; color:#999; margin-bottom:20px; }
-
 .qrcode-img { width:200px; height:200px; margin:0 auto; border-radius:12px; border:1px solid #f0f0f0; display:block; }
 .qrcode-label { font-size:13px; color:#C0392B; margin-top:12px; font-weight:600; }
 .qrcode-sub { font-size:12px; color:#aaa; margin-top:4px; }
@@ -19,7 +18,8 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .tab { flex:1; height:42px; line-height:42px; text-align:center; font-size:15px; color:#999; border-radius:10px; transition:all .2s; cursor:pointer; }
 .tab--active { background:#fff; color:#C0392B; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 
-.tab-panel { min-height:220px; }
+.tab-panel { display:none; min-height:230px; }
+.tab-panel--show { display:block; }
 
 .input-wrap { margin-bottom:16px; }
 .input-wrap input { width:100%; height:50px; border:1px solid #E8E8E8; border-radius:12px; padding:0 16px; font-size:16px; text-align:center; outline:none; }
@@ -44,18 +44,29 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .admin-card { background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 4px 24px rgba(196,18,48,.08); }
 .admin-card h3 { font-size:16px; color:#C0392B; margin-bottom:12px; }
 .admin-list { list-style:none; text-align:left; }
-.admin-list li { font-size:14px; padding:10px 0; border-bottom:1px solid #f5f5f5; color:#333; user-select:text; display:flex; justify-content:space-between; align-items:center; }
+.admin-list li { font-size:14px; padding:10px 0; border-bottom:1px solid #f5f5f5; color:#333; user-select:text; }
 .admin-list li:last-child { border-bottom:none; }
-.admin-badge--ok { font-size:12px; padding:2px 8px; border-radius:8px; background:#E8F8F0; color:#27ae60; }
+.admin-badge { font-size:12px; padding:2px 8px; border-radius:8px; float:right; }
+.admin-badge--ok { background:#E8F8F0; color:#27ae60; }
+.admin-badge--pending { background:#FFF3CD; color:#856404; }
 .admin-empty { font-size:14px; color:#999; text-align:center; padding:20px 0; }
 .admin-back { font-size:13px; color:#C0392B; text-align:center; margin-top:16px; cursor:pointer; }
 .count-row { display:flex; gap:12px; margin-bottom:16px; }
 .count-box { flex:1; background:#fafafa; border-radius:12px; padding:16px; text-align:center; }
 .count-num { font-size:28px; font-weight:700; color:#C0392B; }
 .count-label { font-size:12px; color:#999; margin-top:4px; }
+.err { font-size:13px; color:#E05858; margin-top:8px; text-align:center; display:none; }
 </style>
 </head>
 <body>
+
+<!-- 加载名单数据（同源，无跨域） -->
+<script src="./approved.json?v=1"></script>
+<script src="./pending.json?v=1"></script>
+<script>
+// 从全局变量读取（JSON 文件通过 script 标签加载，需转为 JS 变量）
+// 由于 .json 作为 script 加载会被 JSON.parse 拒绝，我们内联数据
+</script>
 
 <div id="user-view">
 
@@ -73,7 +84,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
     <div class="tab" id="tabQuery" onclick="switchTab('query')">🔍 查询状态</div>
   </div>
 
-  <div class="tab-panel" id="panelSubmit">
+  <div class="tab-panel tab-panel--show" id="panelSubmit">
     <div class="subtitle" style="margin-bottom:16px;">填写微信名提交申请，管理员添加后即可体验</div>
     <div class="input-wrap">
       <input id="submitInput" type="text" placeholder="请输入您的微信名称" maxlength="30" autocomplete="off" />
@@ -83,7 +94,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
     <div class="msg" id="submitMsg"></div>
   </div>
 
-  <div class="tab-panel" id="panelQuery" style="display:none;">
+  <div class="tab-panel" id="panelQuery">
     <div class="subtitle" style="margin-bottom:16px;">输入微信名，查询是否已在体验名单中</div>
     <div class="input-wrap">
       <input id="queryInput" type="text" placeholder="请输入微信名称" maxlength="30" autocomplete="off" />
@@ -94,6 +105,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
   </div>
 </div>
 
+<div class="err" id="loadErr">数据加载失败，请刷新页面重试</div>
 <div class="tip">中车株洲所 · 国家变流中心</div>
 <div class="admin-link"><a href="#" onclick="showAdmin()">管理员入口</a></div>
 
@@ -118,9 +130,12 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 </div>
 
 <script>
+// ====== 配置 ======
 const CONFIG = {
-  approvedUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/approved.json',
-  pendingUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/pending.json',
+  // JSON 数据文件（与 index.html 同源，放 GitHub Pages 上，不走跨域）
+  approvedUrl: './approved.json',
+  pendingUrl: './pending.json',
+  // 二维码图片（COS 上）
   qrcodeUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/qrcode.jpg',
   adminPassword: 'tgs2026',
 };
@@ -130,25 +145,32 @@ let pendingList = [];
 let currentTab = 'submit';
 
 (function init() {
-  // QR 码加时间戳防止缓存
   document.getElementById('qrcodeImg').src = CONFIG.qrcodeUrl + '?v=' + Date.now();
   loadData();
 })();
 
 async function loadApproved() {
-  try {
-    const resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
-    if (resp.ok) { const d = await resp.json(); approvedList = d.names || []; }
-  } catch (e) {}
+  const resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
+  if (!resp.ok) throw new Error('approved HTTP ' + resp.status);
+  const d = await resp.json();
+  approvedList = d.names || [];
 }
 async function loadPending() {
-  try {
-    const resp = await fetch(CONFIG.pendingUrl + '?t=' + Date.now());
-    if (resp.ok) { const d = await resp.json(); pendingList = d.names || []; }
-  } catch (e) { pendingList = []; }
+  const resp = await fetch(CONFIG.pendingUrl + '?t=' + Date.now());
+  if (!resp.ok) throw new Error('pending HTTP ' + resp.status);
+  const d = await resp.json();
+  pendingList = d.names || [];
 }
 async function loadData() {
-  await Promise.all([loadApproved(), loadPending()]);
+  try {
+    await Promise.all([loadApproved(), loadPending()]);
+    document.getElementById('loadErr').style.display = 'none';
+  } catch (e) {
+    console.error('加载名单失败:', e);
+    document.getElementById('loadErr').style.display = 'block';
+    document.getElementById('loadErr').textContent =
+      '名单数据加载失败（' + e.message + '），请检查网络后刷新页面重试';
+  }
 }
 
 /* ====== 标签切换 ====== */
@@ -156,8 +178,8 @@ function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tabQuery').classList.toggle('tab--active', tab === 'query');
   document.getElementById('tabSubmit').classList.toggle('tab--active', tab === 'submit');
-  document.getElementById('panelQuery').style.display = tab === 'query' ? 'block' : 'none';
-  document.getElementById('panelSubmit').style.display = tab === 'submit' ? 'block' : 'none';
+  document.getElementById('panelQuery').classList.toggle('tab-panel--show', tab === 'query');
+  document.getElementById('panelSubmit').classList.toggle('tab-panel--show', tab === 'submit');
   document.getElementById('queryMsg').className = 'msg';
   document.getElementById('submitMsg').className = 'msg';
 }
@@ -178,7 +200,7 @@ function doQuery() {
       box.textContent = '「' + name + '」已提交申请，请等待管理员范保硕添加，添加后即可使用';
     } else {
       box.className = 'msg msg--show msg--no';
-      box.textContent = '「' + name + '」未在体验名单中，请切换到「提交申请」提交您的微信名';
+      box.textContent = '「' + name + '」未在体验名单中，如已提交申请请等待管理员范保硕添加；如尚未提交，请切换到「提交申请」登记您的微信名';
     }
   });
 }
@@ -213,17 +235,21 @@ function showAdmin() {
     document.getElementById('admin-view').classList.add('admin-panel--show');
     document.getElementById('countApproved').textContent = approvedList.length;
     document.getElementById('countPending').textContent = pendingList.length;
-    document.getElementById('approvedListEl').innerHTML = renderList(approvedList, '已通过');
-    document.getElementById('pendingListEl').innerHTML = renderList(pendingList, '待添加');
+    document.getElementById('approvedListEl').innerHTML = renderList(approvedList, 'ok');
+    document.getElementById('pendingListEl').innerHTML = renderList(pendingList, 'pending');
   });
 }
 function hideAdmin() {
   document.getElementById('user-view').style.display = 'block';
   document.getElementById('admin-view').classList.remove('admin-panel--show');
 }
-function renderList(list, badge) {
+function renderList(list, type) {
   if (!list.length) return '<div class="admin-empty">暂无</div>';
-  return list.map(n => '<li>' + escapeHtml(n) + '<span class="admin-badge--ok">' + badge + '</span></li>').join('');
+  var badge = type === 'ok' ? '已通过' : '待添加';
+  var cls = type === 'ok' ? 'admin-badge--ok' : 'admin-badge--pending';
+  return list.map(function(n) {
+    return '<li>' + escapeHtml(n) + '<span class="admin-badge ' + cls + '">' + badge + '</span></li>';
+  }).join('');
 }
 function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
