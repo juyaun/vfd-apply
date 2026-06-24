@@ -7,7 +7,7 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear-gradient(160deg,#FFF5F5,#FDE8E8,#FFFBFB); min-height:100vh; padding:36px 20px; display:flex; flex-direction:column; align-items:center; }
-.card { background:#fff; border-radius:20px; padding:32px 28px; width:100%; max-width:400px; box-shadow:0 4px 24px rgba(196,18,48,.08); text-align:center; margin-bottom:20px; }
+.card { background:#fff; border-radius:20px; padding:32px 28px; width:calc(100vw - 40px); max-width:400px; box-shadow:0 4px 24px rgba(196,18,48,.08); text-align:center; margin-bottom:20px; }
 .title { font-size:22px; font-weight:700; color:#C0392B; margin-bottom:4px; }
 .subtitle { font-size:13px; color:#999; margin-bottom:20px; }
 .qrcode-img { width:200px; height:200px; margin:0 auto; border-radius:12px; border:1px solid #f0f0f0; display:block; }
@@ -18,8 +18,10 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .tab { flex:1; height:42px; line-height:42px; text-align:center; font-size:15px; color:#999; border-radius:10px; transition:all .2s; cursor:pointer; }
 .tab--active { background:#fff; color:#C0392B; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 
-.tab-panel { display:none; min-height:230px; }
-.tab-panel--show { display:block; }
+/* 两个面板绝对定位重叠，切换不变宽度 */
+.panels-wrap { position:relative; min-height:230px; }
+.tab-panel { position:absolute; top:0; left:0; width:100%; opacity:0; pointer-events:none; transition:opacity .15s; }
+.tab-panel--show { position:relative; opacity:1; pointer-events:auto; }
 
 .input-wrap { margin-bottom:16px; }
 .input-wrap input { width:100%; height:50px; border:1px solid #E8E8E8; border-radius:12px; padding:0 16px; font-size:16px; text-align:center; outline:none; }
@@ -28,7 +30,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .btn { width:100%; height:50px; line-height:50px; border-radius:12px; font-size:16px; font-weight:600; border:none; cursor:pointer; }
 .btn--primary { background:#C0392B; color:#fff; }
 
-.msg { font-size:14px; padding:12px; border-radius:10px; margin-top:16px; display:none; line-height:1.6; }
+.msg { font-size:14px; padding:12px; border-radius:10px; margin-top:16px; line-height:1.6; display:none; }
 .msg--show { display:block; }
 .msg--ok { background:#E8F8F0; color:#27ae60; }
 .msg--no { background:#FFF3CD; color:#856404; }
@@ -39,7 +41,7 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 .admin-link { font-size:12px; color:#999; margin-top:20px; text-align:center; width:100%; }
 .admin-link a { color:#C0392B; }
 
-.admin-panel { width:100%; max-width:400px; display:none; }
+.admin-panel { width:calc(100vw - 40px); max-width:400px; display:none; }
 .admin-panel--show { display:block; }
 .admin-card { background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 4px 24px rgba(196,18,48,.08); }
 .admin-card h3 { font-size:16px; color:#C0392B; margin-bottom:12px; }
@@ -60,14 +62,6 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 </head>
 <body>
 
-<!-- 加载名单数据（同源，无跨域） -->
-<script src="./approved.json?v=1"></script>
-<script src="./pending.json?v=1"></script>
-<script>
-// 从全局变量读取（JSON 文件通过 script 标签加载，需转为 JS 变量）
-// 由于 .json 作为 script 加载会被 JSON.parse 拒绝，我们内联数据
-</script>
-
 <div id="user-view">
 
 <div class="card" id="qrcode-card">
@@ -80,32 +74,34 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 
 <div class="card" id="action-card">
   <div class="tabs">
-    <div class="tab tab--active" id="tabSubmit" onclick="switchTab('submit')">📝 提交申请</div>
-    <div class="tab" id="tabQuery" onclick="switchTab('query')">🔍 查询状态</div>
+    <div class="tab tab--active" id="tabSubmit" onclick="switchTab('submit')">提交申请</div>
+    <div class="tab" id="tabQuery" onclick="switchTab('query')">查询状态</div>
   </div>
 
-  <div class="tab-panel tab-panel--show" id="panelSubmit">
-    <div class="subtitle" style="margin-bottom:16px;">填写微信名提交申请，管理员添加后即可体验</div>
-    <div class="input-wrap">
-      <input id="submitInput" type="text" placeholder="请输入您的微信名称" maxlength="30" autocomplete="off" />
+  <div class="panels-wrap">
+    <div class="tab-panel tab-panel--show" id="panelSubmit">
+      <div class="subtitle" style="margin-bottom:16px;">填写微信名提交申请，管理员添加后即可体验</div>
+      <div class="input-wrap">
+        <input id="submitInput" type="text" placeholder="请输入您的微信名称" maxlength="30" autocomplete="off" />
+      </div>
+      <div class="hint" id="submitHint">请输入微信名称</div>
+      <button class="btn btn--primary" onclick="doSubmit()">提交申请</button>
+      <div class="msg" id="submitMsg"></div>
     </div>
-    <div class="hint" id="submitHint">请输入微信名称</div>
-    <button class="btn btn--primary" onclick="doSubmit()">提交申请</button>
-    <div class="msg" id="submitMsg"></div>
-  </div>
 
-  <div class="tab-panel" id="panelQuery">
-    <div class="subtitle" style="margin-bottom:16px;">输入微信名，查询是否已在体验名单中</div>
-    <div class="input-wrap">
-      <input id="queryInput" type="text" placeholder="请输入微信名称" maxlength="30" autocomplete="off" />
+    <div class="tab-panel" id="panelQuery">
+      <div class="subtitle" style="margin-bottom:16px;">输入微信名，查询是否已在体验名单中</div>
+      <div class="input-wrap">
+        <input id="queryInput" type="text" placeholder="请输入微信名称" maxlength="30" autocomplete="off" />
+      </div>
+      <div class="hint" id="queryHint">请输入微信名称</div>
+      <button class="btn btn--primary" onclick="doQuery()">查询</button>
+      <div class="msg" id="queryMsg"></div>
     </div>
-    <div class="hint" id="queryHint">请输入微信名称</div>
-    <button class="btn btn--primary" onclick="doQuery()">查询</button>
-    <div class="msg" id="queryMsg"></div>
   </div>
 </div>
 
-<div class="err" id="loadErr">数据加载失败，请刷新页面重试</div>
+<div class="err" id="loadErr"></div>
 <div class="tip">中车株洲所 · 国家变流中心</div>
 <div class="admin-link"><a href="#" onclick="showAdmin()">管理员入口</a></div>
 
@@ -132,105 +128,143 @@ body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:linear
 <script>
 // ====== 配置 ======
 const CONFIG = {
-  // JSON 数据文件（与 index.html 同源，放 GitHub Pages 上，不走跨域）
   approvedUrl: './approved.json',
   pendingUrl: './pending.json',
-  // 二维码图片（COS 上）
   qrcodeUrl: 'https://juyuan1-1446297214.cos.ap-guangzhou.myqcloud.com/apply/qrcode.jpg',
   adminPassword: 'tgs2026',
+  githubToken: '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',
+  githubApi: 'https://api.github.com/repos/juyaun/vfd-apply/contents/pending.json',
 };
 
 let approvedList = [];
 let pendingList = [];
-let currentTab = 'submit';
 
 (function init() {
   document.getElementById('qrcodeImg').src = CONFIG.qrcodeUrl + '?v=' + Date.now();
   loadData();
 })();
 
+// ====== 数据加载 ======
 async function loadApproved() {
-  const resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
+  var resp = await fetch(CONFIG.approvedUrl + '?t=' + Date.now());
   if (!resp.ok) throw new Error('approved HTTP ' + resp.status);
-  const d = await resp.json();
-  approvedList = d.names || [];
+  approvedList = (await resp.json()).names || [];
 }
 async function loadPending() {
-  const resp = await fetch(CONFIG.pendingUrl + '?t=' + Date.now());
+  var resp = await fetch(CONFIG.pendingUrl + '?t=' + Date.now());
   if (!resp.ok) throw new Error('pending HTTP ' + resp.status);
-  const d = await resp.json();
-  pendingList = d.names || [];
+  pendingList = (await resp.json()).names || [];
 }
 async function loadData() {
   try {
     await Promise.all([loadApproved(), loadPending()]);
     document.getElementById('loadErr').style.display = 'none';
   } catch (e) {
-    console.error('加载名单失败:', e);
     document.getElementById('loadErr').style.display = 'block';
-    document.getElementById('loadErr').textContent =
-      '名单数据加载失败（' + e.message + '），请检查网络后刷新页面重试';
+    document.getElementById('loadErr').textContent = '数据加载失败（' + e.message + '），请检查网络后刷新';
   }
 }
 
-/* ====== 标签切换 ====== */
+// ====== 标签切换（绝对定位，宽度不变） ======
 function switchTab(tab) {
-  currentTab = tab;
-  document.getElementById('tabQuery').classList.toggle('tab--active', tab === 'query');
   document.getElementById('tabSubmit').classList.toggle('tab--active', tab === 'submit');
-  document.getElementById('panelQuery').classList.toggle('tab-panel--show', tab === 'query');
+  document.getElementById('tabQuery').classList.toggle('tab--active', tab === 'query');
   document.getElementById('panelSubmit').classList.toggle('tab-panel--show', tab === 'submit');
-  document.getElementById('queryMsg').className = 'msg';
+  document.getElementById('panelQuery').classList.toggle('tab-panel--show', tab === 'query');
   document.getElementById('submitMsg').className = 'msg';
+  document.getElementById('queryMsg').className = 'msg';
 }
 
-/* ====== 查询 ====== */
+// ====== 查询 ======
 function doQuery() {
-  const name = document.getElementById('queryInput').value.trim();
+  var name = document.getElementById('queryInput').value.trim();
   if (!name) { document.getElementById('queryHint').style.display='block'; return; }
   document.getElementById('queryHint').style.display='none';
-
-  loadData().then(() => {
-    const box = document.getElementById('queryMsg');
-    if (approvedList.includes(name)) {
+  loadData().then(function() {
+    var box = document.getElementById('queryMsg');
+    if (approvedList.indexOf(name) !== -1) {
       box.className = 'msg msg--show msg--ok';
       box.textContent = '「' + name + '」已在体验名单中，长按上方小程序码即可进入';
-    } else if (pendingList.includes(name)) {
+    } else if (pendingList.indexOf(name) !== -1) {
       box.className = 'msg msg--show msg--no';
       box.textContent = '「' + name + '」已提交申请，请等待管理员范保硕添加，添加后即可使用';
     } else {
       box.className = 'msg msg--show msg--no';
-      box.textContent = '「' + name + '」未在体验名单中，如已提交申请请等待管理员范保硕添加；如尚未提交，请切换到「提交申请」登记您的微信名';
+      box.textContent = '「' + name + '」未在体验名单中。如已提交申请请等待管理员范保硕添加；如尚未提交，请切换到「提交申请」登记您的微信名';
     }
   });
 }
 
-/* ====== 提交 ====== */
+// ====== 提交（写 GitHub API） ======
 function doSubmit() {
-  const name = document.getElementById('submitInput').value.trim();
+  var name = document.getElementById('submitInput').value.trim();
   if (!name) { document.getElementById('submitHint').style.display='block'; return; }
   document.getElementById('submitHint').style.display='none';
 
-  loadData().then(() => {
-    const box = document.getElementById('submitMsg');
-    if (approvedList.includes(name)) {
+  loadData().then(function() {
+    var box = document.getElementById('submitMsg');
+    if (approvedList.indexOf(name) !== -1) {
       box.className = 'msg msg--show msg--ok';
       box.textContent = '「' + name + '」已在体验名单中，长按上方小程序码即可进入';
-    } else if (pendingList.includes(name)) {
-      box.className = 'msg msg--show msg--info';
-      box.textContent = '「' + name + '」已提交过申请，请耐心等待管理员范保硕添加，添加后即可使用';
-    } else {
-      box.className = 'msg msg--show msg--info';
-      box.textContent = '已提交「' + name + '」，等待管理员范保硕添加后即可使用，感谢您的配合';
+      return;
     }
+    if (pendingList.indexOf(name) !== -1) {
+      box.className = 'msg msg--show msg--info';
+      box.textContent = '「' + name + '」已提交过申请，请耐心等待管理员范保硕添加';
+      return;
+    }
+    // 调用 GitHub API 写入 pending.json
+    box.className = 'msg msg--show msg--info';
+    box.textContent = '提交中...';
+    writeToPending(name, box);
   });
 }
 
-/* ====== 管理员 ====== */
+async function writeToPending(name, box) {
+  try {
+    // 1. 先读取当前文件（获取 SHA）
+    var getResp = await fetch(CONFIG.githubApi, {
+      headers: { Authorization: 'Bearer ' + CONFIG.githubToken }
+    });
+    if (!getResp.ok) throw new Error('读取失败');
+    var fileData = await getResp.json();
+    var sha = fileData.sha;
+    var current = JSON.parse(atob(fileData.content.replace(/\n/g, '')));
+    var names = current.names || [];
+    if (names.indexOf(name) !== -1) {
+      box.textContent = '「' + name + '」已提交过，请耐心等待管理员范保硕添加';
+      return;
+    }
+    names.push(name);
+
+    // 2. 写入更新
+    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify({ names: names }, null, 2))));
+    var putResp = await fetch(CONFIG.githubApi, {
+      method: 'PUT',
+      headers: {
+        Authorization: 'Bearer ' + CONFIG.githubToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'add ' + name,
+        content: newContent,
+        sha: sha
+      })
+    });
+    if (!putResp.ok) throw new Error('写入失败 HTTP ' + putResp.status);
+
+    pendingList.push(name);
+    box.textContent = '已提交「' + name + '」，等待管理员范保硕添加后即可使用';
+  } catch (e) {
+    box.textContent = '提交失败（' + e.message + '），请截图此页面发送给管理员范保硕';
+  }
+}
+
+// ====== 管理员 ======
 function showAdmin() {
-  const pw = prompt('管理员密码：');
+  var pw = prompt('管理员密码：');
   if (pw !== CONFIG.adminPassword) { alert('密码错误'); return; }
-  loadData().then(() => {
+  loadData().then(function() {
     document.getElementById('user-view').style.display = 'none';
     document.getElementById('admin-view').classList.add('admin-panel--show');
     document.getElementById('countApproved').textContent = approvedList.length;
